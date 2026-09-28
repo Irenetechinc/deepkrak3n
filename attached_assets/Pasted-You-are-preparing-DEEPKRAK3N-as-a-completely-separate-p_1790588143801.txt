@@ -1,0 +1,298 @@
+You are preparing DEEPKRAK3N as a completely separate production service for Railway.
+
+DEEPKRAK3N must not be deployed inside the AdRoom backend and must not use the AdRoom Railway URL. It will have its own Railway service and its own public HTTPS base URL. AdRoom will consume that URL through:
+
+DEEPKRAK3N_BASE_URL=https://<deepkrak3n-railway-domain>
+
+Before changing anything, inspect the existing DEEPKRAK3N repository and understand its current structure, entrypoint, dependencies, and functionality. Preserve working functionality. Do not rewrite the entire project unnecessarily.
+
+## Primary objective
+
+Make DEEPKRAK3N deployable as a standalone Python FastAPI service on Railway.
+
+Railway must be able to detect Python automatically and start the app through a Procfile web process.
+
+The service must listen on:
+
+- Host: 0.0.0.0
+- Port: the Railway-provided PORT environment variable
+- Public health endpoint: GET /health
+
+Use the correct production command for FastAPI:
+
+web: gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+
+If the project strictly requires `web: gunicorn main:app`, explain why that is not sufficient for an ASGI/FastAPI app and use the correct Uvicorn worker configuration instead.
+
+## Required project files
+
+Ensure the repository contains the appropriate files:
+
+1. `main.py`
+   - Exposes the FastAPI application as `app`
+   - Does not start a development server directly when imported by Gunicorn
+   - Uses the Railway `PORT` variable
+   - Binds to `0.0.0.0`
+
+2. `Procfile`
+   - Contains exactly one production web process
+   - Preferred content:
+
+   web: gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+
+3. `requirements.txt`
+   - Include only the dependencies actually required by the project
+   - At minimum, if needed by the implementation:
+     - fastapi
+     - uvicorn[standard]
+     - gunicorn
+   - Preserve any existing Deepkrak3n dependencies that are required for its search engine
+   - Do not add unrelated AI, database, browser automation, or cloud dependencies
+
+4. `.env.example`
+   - Document non-secret configuration variables
+   - Never include real credentials, API keys, cookies, tokens, or passwords
+
+5. `.gitignore`
+   - Ignore `.env`
+   - Ignore Python caches
+   - Ignore temporary scan output
+   - Ignore logs and local virtual environments
+
+6. `README.md`
+   - Explain local setup
+   - Explain Railway deployment
+   - Document all endpoints
+   - Include curl examples
+   - Explain the AdRoom integration variable
+
+7. Optional:
+   - `runtime.txt` or another Railway-compatible Python version declaration if the project needs one
+   - Use a stable supported Python version such as Python 3.11 unless the repository requires another version
+
+## Required API contract with AdRoom
+
+The AdRoom backend already calls DEEPKRAK3N as an external HTTP service.
+
+Do not change the contract unless absolutely necessary.
+
+### Health check
+
+Implement:
+
+GET /health
+
+Expected response:
+
+HTTP 200
+
+{
+  "status": "ok",
+  "service": "deepkrak3n"
+}
+
+The endpoint must be fast and must not run a username search.
+
+It must return a non-200 response only when the service process itself is unhealthy.
+
+### Username search
+
+Implement:
+
+POST /api/search/username?username=<USERNAME>&limit=30
+
+Example:
+
+curl -X POST \
+  "https://<deepkrak3n-railway-domain>/api/search/username?username=public-user&limit=30" \
+  -H "Accept: application/json"
+
+The request may have an empty body. Do not require a JSON body.
+
+The endpoint must:
+
+- Accept a public username
+- Validate and sanitize the username
+- Apply a safe maximum result limit
+- Default to 30 results when no limit is supplied
+- Return only publicly available profile discovery results
+- Never require a logged-in social media session
+- Never require cookies from AdRoom
+- Never access private accounts
+- Never collect private messages, passwords, session tokens, or private contact data
+- Never use credential stuffing, account takeover, or authenticated scraping
+
+The preferred response format is:
+
+{
+  "results": [
+    {
+      "username": "public-user",
+      "site": "example",
+      "platform": "example",
+      "profile_url": "https://example.com/public-user",
+      "url": "https://example.com/public-user",
+      "status": "found",
+      "bio": "Optional public profile description",
+      "description": "Optional public description",
+      "text": "Optional public summary"
+    }
+  ]
+}
+
+An empty result must be a successful response:
+
+{
+  "results": []
+}
+
+The AdRoom adapter can also normalize these response formats:
+
+- A top-level JSON array
+- `{ "results": [...] }`
+- `{ "data": [...] }`
+- `{ "items": [...] }`
+- `{ "found_profiles": [...] }`
+
+Make the response deterministic and JSON serializable.
+
+Each returned record should expose at least one usable public URL using one of these fields:
+
+- `profile_url`
+- `url`
+- `url_user`
+- `href`
+- `link`
+- `permalink`
+
+The AdRoom backend uses those URLs to create public-profile discovery evidence.
+
+## Error handling
+
+Use clear HTTP responses:
+
+- 400 for missing or invalid usernames
+- 400 for invalid limits
+- 429 when rate limiting is triggered
+- 500 for unexpected internal errors
+- 503 when the search engine is unavailable
+
+Do not return stack traces, environment variables, credentials, filesystem paths, or internal exception details to clients.
+
+Log useful server-side diagnostic information with standard Python logging, but never log secrets or private user data.
+
+## Runtime and reliability requirements
+
+The service must be production-safe on Railway:
+
+- Read `PORT` from the environment
+- Bind to `0.0.0.0`
+- Do not hardcode localhost
+- Do not assume a fixed port
+- Use request and subprocess timeouts
+- Prevent indefinitely running searches
+- Clean up temporary files
+- Avoid memory leaks
+- Handle concurrent requests safely
+- Return JSON for all API responses
+- Avoid blocking the event loop where possible
+- Use bounded concurrency so multiple searches cannot exhaust the Railway instance
+- Make `/health` independent from the search engine
+- Fail clearly if a search dependency is unavailable
+
+If the existing Deepkrak3n implementation invokes a command-line tool, isolate each request in a temporary directory, enforce a timeout, capture structured output only, and remove the temporary directory in a `finally` block.
+
+Do not auto-install packages or clone repositories during a user request. All required dependencies must be declared in `requirements.txt` and installed during the Railway build.
+
+## Security and privacy requirements
+
+This service is for public username discovery only.
+
+Do not add:
+
+- Login automation
+- Password handling
+- Session-cookie handling
+- Private-account access
+- Credential collection
+- Private email or phone enumeration
+- Data broker integrations
+- Hidden tracking
+- Persistent storage of unnecessary profile data
+- Exfiltration of raw tool output
+
+Return sanitized public profile URLs and brief public descriptions only.
+
+If the upstream tool attempts unsupported or private access, disable that behavior and document it.
+
+## Railway deployment requirements
+
+Prepare the project so Railway can deploy it from the repository root.
+
+Railway configuration must:
+
+- Detect the Python application
+- Install `requirements.txt`
+- Use the `Procfile`
+- Start the `web` process
+- Expose the correct `$PORT`
+- Use `/health` as the health check path if Railway health checks are configured
+- Not require Supabase
+- Not require the AdRoom database
+- Not require AdRoom secrets
+- Not share a filesystem or process with AdRoom
+
+If any external API key is genuinely required by the existing Deepkrak3n implementation, document its name in `.env.example` and README, but never write the value into the repository.
+
+Do not invent credentials or ask me to paste secrets into source files.
+
+## Local verification
+
+Before finishing, run the appropriate checks:
+
+1. Python syntax check:
+
+python -m compileall .
+
+2. Dependency/import check:
+
+python -c "from main import app; print(app)"
+
+3. Start the service locally with a temporary port:
+
+PORT=8080 gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+
+4. Verify health:
+
+curl -i http://127.0.0.1:8080/health
+
+5. Verify username search:
+
+curl -i -X POST \
+  "http://127.0.0.1:8080/api/search/username?username=public-user&limit=30" \
+  -H "Accept: application/json"
+
+6. Verify invalid input returns a clean 4xx response.
+
+7. If tests already exist, run them and fix failures caused by the deployment preparation.
+
+Do not claim deployment success unless the application starts and both `/health` and `/api/search/username` respond correctly.
+
+## Final response requirements
+
+When complete, report:
+
+1. What files were created or updated
+2. The final production start command
+3. The health endpoint
+4. The username search endpoint
+5. Required Railway environment variables
+6. Any external credentials that are genuinely required
+7. The exact value that should be configured in AdRoom:
+
+DEEPKRAK3N_BASE_URL=https://<actual-deepkrak3n-railway-domain>
+
+8. The exact curl command to test the deployed Railway URL
+9. Any limitations or public-data privacy restrictions
+
+Do not modify the AdRoom backend unless a change is strictly required to preserve the API contract above.
