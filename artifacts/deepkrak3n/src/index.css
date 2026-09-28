@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 47% 5%;
+  --foreground: 210 40% 98%;
+  --border: 230 20% 16%;
+  --card: 231 24% 10%;
+  --card-foreground: 210 40% 98%;
+  --popover: 231 24% 10%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 247 32% 27%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 230 20% 13%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 228 16% 42%;
+  --muted-foreground: 228 16% 66%;
+  --accent: 247 32% 27%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 98%;
+  --input: 230 20% 16%;
+  --ring: 247 60% 65%;
+  --chart-1: 247 60% 65%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+  --app-font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  background: #06070d;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #06070d;
+  color: #fff;
+  font-family: var(--app-font-sans);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+@layer utilities {
+  .bubble-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0.24;
+  }
+
+  .bubble {
+    position: absolute;
+    width: 18rem;
+    height: 18rem;
+    border: 1px solid rgba(147, 141, 255, 0.12);
+    border-radius: 9999px;
+    filter: blur(1px);
+  }
+
+  .bubble--1 { top: 6%; left: 7%; }
+  .bubble--2 { top: 32%; right: 4%; width: 25rem; height: 25rem; }
+  .bubble--3 { bottom: 5%; left: 33%; width: 22rem; height: 22rem; }
+  .bubble--4 { top: 18%; left: 42%; width: 9rem; height: 9rem; }
+  .bubble--5 { bottom: 19%; right: 26%; width: 12rem; height: 12rem; }
+  .bubble--6 { top: 53%; left: 13%; width: 8rem; height: 8rem; }
+  .bubble--7 { top: 8%; right: 28%; width: 10rem; height: 10rem; }
+  .bubble--8 { bottom: 8%; right: 9%; width: 16rem; height: 16rem; }
+  .bubble--9 { top: 67%; left: 48%; width: 5rem; height: 5rem; }
+  .bubble--10 { top: 42%; left: 3%; width: 6rem; height: 6rem; }
+  .bubble--11 { bottom: 30%; right: 47%; width: 7rem; height: 7rem; }
+  .bubble--12 { top: 2%; left: 65%; width: 5rem; height: 5rem; }
+
+  .glitch-logo {
+    filter: drop-shadow(0 0 18px rgba(116, 110, 255, 0.25));
+  }
+
+  .stack-title {
+    letter-spacing: 0.03em;
+  }
+
+  .stack {
+    display: grid;
+    font-size: clamp(1.35rem, 3vw, 2rem);
+    font-weight: 800;
+    line-height: 0.9;
+  }
+
+  .stack span {
+    grid-area: 1 / 1;
+    opacity: 0.88;
+    transform: translate(calc(var(--index) * 1px), calc(var(--index) * 1px));
+  }
+
+  .stack span:nth-child(1) { color: #a7a2ff; }
+  .stack span:nth-child(2) { color: #6e67c6; }
+  .stack span:nth-child(3) { color: #403b75; }
+
+  .stack-sub {
+    display: block;
+    margin-top: 0.45rem;
+    color: #696f89;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+}

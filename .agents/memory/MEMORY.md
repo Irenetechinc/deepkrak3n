@@ -1,0 +1,1 @@
+- [Vite PostCSS config](vite-postcss-esm.md) — ESM workspace packages need a `.cjs` PostCSS config when the config uses CommonJS exports.

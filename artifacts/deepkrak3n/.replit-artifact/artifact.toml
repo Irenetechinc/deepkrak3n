@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "DeepKrak3n"
+description = "A dark, privacy-focused username discovery workspace that searches public profiles across many platforms and turns results into an investigative relationship map."
+version = "1.0.0"
+id = "artifacts/deepkrak3n"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22741
+
+[services.development]
+run = "pnpm --filter @workspace/deepkrak3n run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/deepkrak3n", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/deepkrak3n/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22741"
+BASE_PATH = "/"
